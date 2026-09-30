@@ -12,8 +12,12 @@ const path = require("node:path");
 const RAIZ = path.resolve(__dirname, "..");
 const SAIDA = path.join(RAIZ, "workflows", "radar-vagas.json");
 
+// Sempre LF: o mesmo JSON precisa sair igual no Windows e no CI.
+const CR = String.fromCharCode(13);
+const ler = (...partes) => fs.readFileSync(path.join(RAIZ, ...partes), "utf8").split(CR).join("");
+
 function fonte(nome) {
-  const codigo = fs.readFileSync(path.join(RAIZ, "src", nome), "utf8");
+  const codigo = ler("src", nome);
   return codigo.replace(/^if \(typeof module !== "undefined"\).*$/m, "").trim();
 }
 
@@ -26,8 +30,8 @@ function code(id, nome, posicao, js) {
 }
 
 function build() {
-  const config = JSON.parse(fs.readFileSync(path.join(RAIZ, "config", "config.json"), "utf8"));
-  config.curriculo = fs.readFileSync(path.join(RAIZ, "config", "curriculo.md"), "utf8");
+  const config = JSON.parse(ler("config", "config.json"));
+  config.curriculo = ler("config", "curriculo.md");
   const CFG = "$('Configuração').first().json";
 
   const nodes = [

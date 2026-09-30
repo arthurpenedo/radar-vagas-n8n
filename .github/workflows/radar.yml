@@ -32,7 +32,7 @@ jobs:
           python-version: "3.13"
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - name: Subir a API do ats-match
         run: |
           pip install "ats-match @ git+https://github.com/arthurpenedo/ats-match"

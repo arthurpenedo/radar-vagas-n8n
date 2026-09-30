@@ -93,6 +93,28 @@ function build() {
       looseTypeValidation: true,
       options: {},
     }),
+    no("b10", "Enviar no WhatsApp?", "if", 2.2, [1760, 300], {
+      conditions: {
+        options: { caseSensitive: true, leftValue: "", typeValidation: "loose", version: 2 },
+        conditions: [{ id: "c3", leftValue: `={{ ${CFG}.whatsapp.ativo }}`, rightValue: true,
+          operator: { type: "boolean", operation: "true", singleValue: true } }],
+        combinator: "and",
+      },
+      looseTypeValidation: true,
+      options: {},
+    }),
+    // Modelo aprovado pela Meta: mensagem iniciada pela empresa. Token na credencial Header Auth, não no JSON.
+    no("b11", "WhatsApp", "httpRequest", 4.2, [1980, 300], {
+      method: "POST",
+      url: `={{ ${CFG}.whatsapp.graph_url }}/{{ ${CFG}.whatsapp.phone_number_id }}/messages`,
+      authentication: "genericCredentialType",
+      genericAuthType: "httpHeaderAuth",
+      sendBody: true,
+      specifyBody: "json",
+      jsonBody: "={{ JSON.stringify($json.whatsapp) }}",
+      options: { timeout: 20000 },
+    }, { credentials: { httpHeaderAuth: { id: "waToken000000001", name: "WhatsApp Cloud API (token)" } },
+      retryOnFail: true, maxTries: 3, waitBetweenTries: 2000, onError: "continueRegularOutput" }),
     no("b9", "Telegram", "telegram", 1.2, [1980, 0], {
       chatId: `={{ ${CFG}.telegram.chat_id }}`,
       text: "={{ $json.telegram }}",
@@ -111,8 +133,10 @@ function build() {
     "Tem vaga nova?": { main: [[{ node: "Pontuar com ats-match", type: "main", index: 0 }],
       [{ node: "Montar resumo", type: "main", index: 0 }]] },
     "Pontuar com ats-match": liga("Montar resumo"),
-    "Montar resumo": liga("Enviar no Telegram?"),
+    "Montar resumo": { main: [[{ node: "Enviar no Telegram?", type: "main", index: 0 },
+      { node: "Enviar no WhatsApp?", type: "main", index: 0 }]] },
     "Enviar no Telegram?": { main: [[{ node: "Telegram", type: "main", index: 0 }], []] },
+    "Enviar no WhatsApp?": { main: [[{ node: "WhatsApp", type: "main", index: 0 }], []] },
   };
 
   const workflow = {

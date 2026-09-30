@@ -36,6 +36,30 @@ function mensagemTelegram(ranking, data) {
   return linhas.join("\n");
 }
 
+// Mensagem iniciada pela empresa (fora da janela de 24 h) só sai com modelo aprovado pela Meta.
+// Parâmetros de modelo não podem ter quebra de linha, tabulação nem mais de 4 espaços seguidos.
+function parametroModelo(texto, limite = 120) {
+  const limpo = String(texto).replace(/\s+/g, " ").trim();
+  return limpo.length > limite ? limpo.slice(0, limite - 1) + "…" : limpo;
+}
+
+function modeloWhatsApp(ranking, data, cfg) {
+  const melhor = ranking.vagas[0];
+  const valores = [data, String(ranking.vagas.length),
+    melhor ? melhor.titulo : "nenhuma hoje", melhor ? melhor.empresa : "-", melhor ? String(melhor.nota) : "-",
+    cfg.whatsapp.link_pagina];
+  return {
+    messaging_product: "whatsapp",
+    to: cfg.whatsapp.para,
+    type: "template",
+    template: {
+      name: cfg.whatsapp.modelo,
+      language: { code: "pt_BR" },
+      components: [{ type: "body", parameters: valores.map((v) => ({ type: "text", text: parametroModelo(v) })) }],
+    },
+  };
+}
+
 function montarResumo(vagas, notas, estatisticas, cfg, agora = new Date()) {
   const ranking = ranquear(vagas, notas, cfg);
   const data = agora.toISOString().slice(0, 10);
@@ -46,7 +70,8 @@ function montarResumo(vagas, notas, estatisticas, cfg, agora = new Date()) {
     estatisticas: { ...estatisticas, abaixo_da_nota: ranking.abaixo_da_nota, sem_nota: ranking.sem_nota },
     vagas: ranking.vagas,
     telegram: mensagemTelegram(ranking, data),
+    whatsapp: cfg.whatsapp ? modeloWhatsApp(ranking, data, cfg) : null,
   };
 }
 
-if (typeof module !== "undefined") module.exports = { ranquear, montarResumo, mensagemTelegram, escaparMarkdown };
+if (typeof module !== "undefined") module.exports = { ranquear, montarResumo, mensagemTelegram, escaparMarkdown, modeloWhatsApp, parametroModelo };

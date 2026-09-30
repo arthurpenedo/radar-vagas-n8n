@@ -70,6 +70,21 @@ test("resumo ranqueia pela nota, respeita nota mínima e conta vagas sem nota", 
   assert.match(r.telegram, /falta: Docker/);
 });
 
+test("WhatsApp: modelo aprovado com 6 parâmetros, sem quebra de linha e com a melhor vaga", () => {
+  const cfg = { ...CFG, whatsapp: { para: "5511900000000", modelo: "radar_vagas", link_pagina: "https://x/radar" } };
+  const vagas = [{ id: 1, titulo: "Analista\nde IA   Jr", empresa: "Empresa X", modelo: "remoto", link: "https://a", publicada: "2026-09-30" }];
+  const r = montarResumo(vagas, [{ score: 88 }], {}, cfg, AGORA);
+  assert.equal(r.whatsapp.type, "template");
+  assert.equal(r.whatsapp.template.name, "radar_vagas");
+  assert.equal(r.whatsapp.template.language.code, "pt_BR");
+  const params = r.whatsapp.template.components[0].parameters.map((p) => p.text);
+  assert.deepEqual(params, ["2026-10-01", "1", "Analista de IA Jr", "Empresa X", "88", "https://x/radar"]);
+  assert.ok(params.every((p) => !/\n|\t| {5}/.test(p)));
+  const vazio = montarResumo([], [], {}, cfg, AGORA).whatsapp.template.components[0].parameters.map((p) => p.text);
+  assert.deepEqual(vazio.slice(1, 5), ["0", "nenhuma hoje", "-", "-"]);
+  assert.equal(montarResumo([], [], {}, CFG, AGORA).whatsapp, null); // sem configuração, sem WhatsApp
+});
+
 test("mensagem do Telegram escapa MarkdownV2 e respeita o limite", () => {
   assert.equal(escaparMarkdown("Dev (Jr.) - IA"), "Dev \\(Jr\\.\\) \\- IA");
   const muitas = Array.from({ length: 200 }, (_, i) => ({ id: i, titulo: "Vaga ".repeat(10), empresa: "E",

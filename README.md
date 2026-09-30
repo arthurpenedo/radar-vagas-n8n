@@ -5,7 +5,7 @@
 ![n8n](https://img.shields.io/badge/n8n-2.41-EA4B71)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> Workflow do **n8n** que todo dia útil busca vagas na Gupy, filtra o que interessa, **pontua cada vaga contra o seu currículo** com uma API em Python ([ats-match](https://github.com/arthurpenedo/ats-match)) e manda o ranking no Telegram.
+> Workflow do **n8n** que todo dia útil busca vagas na Gupy, filtra o que interessa, **pontua cada vaga contra o seu currículo** com uma API em Python ([ats-match](https://github.com/arthurpenedo/ats-match)) e manda o ranking no **WhatsApp** ou no Telegram.
 
 ## O problema
 
@@ -37,7 +37,8 @@ Execução manual ──┴─► Configuração ─► Um item por termo ─►
 | Buscar na Gupy | Uma chamada por termo à API pública do portal da Gupy, com 3 tentativas; se uma busca falhar, as outras seguem. |
 | Filtrar vagas | Remove repetidas entre termos, antigas, presenciais fora das cidades escolhidas e títulos com termos excluídos (sênior, gerente...). Conta cada descarte por motivo. |
 | Pontuar com ats-match | Manda currículo + descrição para a API do ats-match e recebe a nota 0–100 e as habilidades obrigatórias que faltam. |
-| Montar resumo | Ranqueia pela nota, aplica a nota mínima e gera a mensagem do Telegram (MarkdownV2, dentro do limite de 4096 caracteres). |
+| Montar resumo | Ranqueia pela nota, aplica a nota mínima e gera a mensagem do Telegram (MarkdownV2, até 4096 caracteres) e o modelo do WhatsApp. |
+| WhatsApp | Envia o resumo do dia por um modelo aprovado pela Meta (a mensagem parte do robô, então precisa de modelo), com o link para o ranking completo. |
 
 ## Decisões técnicas
 
@@ -46,7 +47,7 @@ Execução manual ──┴─► Configuração ─► Um item por termo ─►
 - **n8n orquestra, Python calcula.** A nota de aderência já existia como API no ats-match; o n8n só chama `POST /match`. Cada ferramenta faz o que faz melhor, e a regra de pontuação continua testada no projeto dela.
 - **Falhar parcialmente em vez de parar.** Busca que falha não derruba as outras; vaga que o ats-match não consegue pontuar entra na contagem "sem nota" em vez de sumir.
 - **Sem estado entre execuções.** "Vaga nova" é decidido pela data de publicação (janela de horas), não por uma lista de vagas já vistas. Funciona igual numa instância do n8n e num runner descartável do CI.
-- **Nada de segredo no JSON.** O Telegram usa a credencial do próprio n8n; o workflow exportado não carrega token.
+- **Nada de segredo no JSON.** Telegram e WhatsApp usam credenciais do próprio n8n; o workflow exportado não carrega token.
 
 ## Como usar
 
@@ -61,6 +62,17 @@ Execução manual ──┴─► Configuração ─► Um item por termo ─►
 3. No nó **Configuração**, troque o currículo pelo seu, ajuste termos e filtros e aponte `ats_url` para a API.
 4. Para receber no Telegram: crie um bot com o @BotFather, cadastre a credencial no nó **Telegram**, preencha `telegram.chat_id` e mude `telegram.ativo` para `true`.
 5. Ative o workflow.
+
+**No WhatsApp** (Cloud API oficial da Meta):
+
+1. Crie o app na Meta e o token permanente como descrito no [bypenas-pedidos-n8n](https://github.com/arthurpenedo/bypenas-pedidos-n8n#ligar-o-whatsapp-cloud-api-oficial-da-meta) e cadastre o token no n8n como credencial **Header Auth** (`Authorization: Bearer <token>`), selecionada no nó **WhatsApp**.
+2. Em WhatsApp Manager → Modelos de mensagem, crie o modelo `radar_vagas`, categoria **Utilidade**, idioma **Português (BR)**, com o corpo:
+   ```
+   Radar de vagas de {{1}}: {{2}} vagas novas acima da nota mínima. Melhor: {{3}} ({{4}}), nota {{5}}. Ranking completo: {{6}}
+   ```
+3. Depois de aprovado, preencha no nó **Configuração**: `whatsapp.ativo: true`, `para` (seu número com DDI, ex. `5511...`), `phone_number_id` e `link_pagina`.
+
+Por que modelo: mensagem que a empresa inicia fora da janela de 24 h de uma conversa só pode sair por modelo aprovado. O CI testa esse envio contra uma "Meta falsa" (`scripts/meta-falsa.js`) que confere o token e registra o modelo e os 6 parâmetros.
 
 **Pela linha de comando** (como o CI faz):
 
@@ -87,6 +99,7 @@ npm run build            # regenera o workflow depois de mudar src/ ou config/
 
 ## Próximos passos
 
+- [x] Envio pelo WhatsApp (modelo aprovado, testado no CI)
 - [ ] Mais fontes (LinkedIn via RSS, Greenhouse, sites próprios)
 - [ ] Registrar as vagas escolhidas no [vagas-mcp](https://github.com/arthurpenedo/vagas-mcp) / Notion
 - [ ] Resumo com LLM das 3 melhores vagas (por que combinam, o que destacar no currículo)

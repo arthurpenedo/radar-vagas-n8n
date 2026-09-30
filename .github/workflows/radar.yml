@@ -44,14 +44,27 @@ jobs:
           key: n8n-${{ env.N8N_VERSION }}
       - name: Instalar o n8n
         run: npm install -g --no-audit --no-fund n8n@${{ env.N8N_VERSION }}
+      - name: Subir a Meta falsa e ligar o WhatsApp apontando para ela
+        run: |
+          nohup node scripts/meta-falsa.js 9999 token-de-teste > meta.log 2>&1 &
+          node scripts/config-teste.js http://localhost:9999/v23.0
       - name: Importar e executar o workflow
         env:
           N8N_USER_FOLDER: ${{ runner.temp }}/n8n
           N8N_DIAGNOSTICS_ENABLED: "false"
         run: |
           n8n import:workflow --input=workflows/radar-vagas.json
+          n8n import:credentials --input=credenciais/whatsapp-teste.json
           n8n execute --id=radarVagasN8n001 --rawOutput > execucao.json
           node scripts/extrair.js execucao.json resumo.json
+      - name: Conferir o envio pelo WhatsApp (modelo aprovado)
+        run: |
+          curl -s http://localhost:9999/enviadas > whatsapp.json && cat whatsapp.json
+          node -e "const e=require('./whatsapp.json'); const r=require('./resumo.json');
+            const ok = r.whatsapp_enviado && e.length === 1 && e[0].modelo === 'radar_vagas'
+              && e[0].parametros.length === 6 && e[0].parametros[1] === String(r.vagas.length);
+            if (!ok) { console.error('envio pelo WhatsApp não confere'); process.exit(1); }
+            console.log('✓ modelo radar_vagas enviado:', e[0].parametros.join(' | '));"
       - name: Montar a página
         run: node scripts/pagina.js resumo.json site/index.html && cp resumo.json site/
       - uses: actions/upload-artifact@v4
@@ -62,6 +75,7 @@ jobs:
             site
             execucao.json
             ats.log
+            meta.log
       - if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:

@@ -21,7 +21,8 @@ function extrairResumo(execucao) {
   if (!resumo) throw new Error("O nó 'Montar resumo' não produziu saída.");
   // Chamadas que falharam mas foram toleradas (onError: continue) aparecem como itens com "error".
   const falhas = (nome) => (runData[nome]?.[0]?.data?.main?.[0] || []).filter((i) => i.json.error).length;
-  resumo.falhas = { gupy: falhas("Buscar na Gupy"), ats_match: falhas("Pontuar com ats-match") };
+  resumo.falhas = { gupy: falhas("Buscar na Gupy"), ats_match: falhas("Pontuar com ats-match"), whatsapp: falhas("WhatsApp") };
+  resumo.whatsapp_enviado = Boolean(runData["WhatsApp"]) && resumo.falhas.whatsapp === 0;
   resumo.nos_executados = Object.keys(runData);
   return resumo;
 }

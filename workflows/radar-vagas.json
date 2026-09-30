@@ -44,7 +44,7 @@
         100
       ],
       "parameters": {
-        "jsCode": "// Edite aqui (ou em config/config.json + npm run build): termos, filtros, currículo e entrega.\nreturn [{ json: {\n  \"termos\": [\n    \"inteligência artificial\",\n    \"automação\",\n    \"analista de dados\",\n    \"prompt\",\n    \"LLM\"\n  ],\n  \"limite_por_termo\": 100,\n  \"horas\": 48,\n  \"modelos\": [\n    \"remoto\",\n    \"hibrido\",\n    \"presencial\"\n  ],\n  \"cidades\": [\n    \"São Paulo\",\n    \"Santo André\",\n    \"São Bernardo do Campo\"\n  ],\n  \"excluir\": [\n    \"sênior\",\n    \"sr\",\n    \"especialista\",\n    \"coordenador\",\n    \"gerente\",\n    \"head\",\n    \"estágio\",\n    \"estagiário\",\n    \"estagiária\"\n  ],\n  \"nota_minima\": 40,\n  \"maximo\": 15,\n  \"ats_url\": \"http://127.0.0.1:8000\",\n  \"telegram\": {\n    \"ativo\": false,\n    \"chat_id\": \"\"\n  },\n  \"curriculo\": \"# Marina Costa (personagem fictícia)\\n\\n## Resumo\\nAnalista de dados com 2 anos de experiência em automação de processos e análise de indicadores de atendimento.\\n\\n## Experiência\\n**Analista de Dados Jr. | Fintech Exemplo (2024–2026)**\\n- Criei consultas SQL no AWS Athena para acompanhar indicadores de atendimento ao cliente.\\n- Montei dashboards no Power BI usados pela liderança de CX.\\n- Automatizei relatórios semanais com Python e Pandas, reduzindo 6 horas de trabalho manual por semana.\\n- Participei de testes de prompts de um chatbot de atendimento com IA generativa.\\n\\n**Estagiária de Operações | Varejo Exemplo (2023–2024)**\\n- Organizei planilhas de controle no Excel e fluxos no Power Automate.\\n\\n## Formação\\nBacharelado em Sistemas de Informação (2025)\\n\\n## Habilidades\\nSQL, Python, Pandas, Power BI, Power Automate, Excel, Git, inglês intermediário\\n\"\n} }];"
+        "jsCode": "// Edite aqui (ou em config/config.json + npm run build): termos, filtros, currículo e entrega.\nreturn [{ json: {\n  \"termos\": [\n    \"inteligência artificial\",\n    \"automação\",\n    \"analista de dados\",\n    \"prompt\",\n    \"LLM\"\n  ],\n  \"limite_por_termo\": 100,\n  \"horas\": 48,\n  \"modelos\": [\n    \"remoto\",\n    \"hibrido\",\n    \"presencial\"\n  ],\n  \"cidades\": [\n    \"São Paulo\",\n    \"Santo André\",\n    \"São Bernardo do Campo\"\n  ],\n  \"excluir\": [\n    \"sênior\",\n    \"sr\",\n    \"especialista\",\n    \"coordenador\",\n    \"gerente\",\n    \"head\",\n    \"estágio\",\n    \"estagiário\",\n    \"estagiária\"\n  ],\n  \"nota_minima\": 40,\n  \"maximo\": 15,\n  \"ats_url\": \"http://127.0.0.1:8000\",\n  \"telegram\": {\n    \"ativo\": false,\n    \"chat_id\": \"\"\n  },\n  \"whatsapp\": {\n    \"ativo\": false,\n    \"para\": \"55DDDNUMERO\",\n    \"modelo\": \"radar_vagas\",\n    \"graph_url\": \"https://graph.facebook.com/v23.0\",\n    \"phone_number_id\": \"COLOQUE_O_PHONE_NUMBER_ID\",\n    \"link_pagina\": \"https://arthurpenedo.github.io/radar-vagas-n8n/\"\n  },\n  \"curriculo\": \"# Marina Costa (personagem fictícia)\\n\\n## Resumo\\nAnalista de dados com 2 anos de experiência em automação de processos e análise de indicadores de atendimento.\\n\\n## Experiência\\n**Analista de Dados Jr. | Fintech Exemplo (2024–2026)**\\n- Criei consultas SQL no AWS Athena para acompanhar indicadores de atendimento ao cliente.\\n- Montei dashboards no Power BI usados pela liderança de CX.\\n- Automatizei relatórios semanais com Python e Pandas, reduzindo 6 horas de trabalho manual por semana.\\n- Participei de testes de prompts de um chatbot de atendimento com IA generativa.\\n\\n**Estagiária de Operações | Varejo Exemplo (2023–2024)**\\n- Organizei planilhas de controle no Excel e fluxos no Power Automate.\\n\\n## Formação\\nBacharelado em Sistemas de Informação (2025)\\n\\n## Habilidades\\nSQL, Python, Pandas, Power BI, Power Automate, Excel, Git, inglês intermediário\\n\"\n} }];"
       }
     },
     {
@@ -175,7 +175,7 @@
         100
       ],
       "parameters": {
-        "jsCode": "// Junta as vagas filtradas com a nota do ats-match, ranqueia e monta o resumo do dia.\n// Roda dentro de um nó Code do n8n (o build injeta este arquivo) e nos testes com node --test.\n\nconst LIMITE_TELEGRAM = 4000; // a API do Telegram aceita até 4096 caracteres por mensagem\n\nfunction escaparMarkdown(texto) {\n  return String(texto).replace(/([_*[\\]()~`>#+\\-=|{}.!\\\\])/g, \"\\\\$1\"); // MarkdownV2\n}\n\nfunction ranquear(vagas, notas, cfg) {\n  const juntas = vagas.map((vaga, i) => {\n    const nota = notas[i] || {};\n    return {\n      ...vaga,\n      descricao: undefined,\n      nota: typeof nota.score === \"number\" ? nota.score : null,\n      faltando: nota.missing_required || [],\n      atendidas: nota.matched_required || [],\n    };\n  });\n  const comNota = juntas.filter((v) => v.nota !== null && v.nota >= cfg.nota_minima);\n  const semNota = juntas.filter((v) => v.nota === null).length; // ats-match fora do ar ou vaga sem descrição\n  comNota.sort((a, b) => b.nota - a.nota || String(b.publicada).localeCompare(String(a.publicada)));\n  return { vagas: comNota.slice(0, cfg.maximo), abaixo_da_nota: juntas.length - comNota.length - semNota, sem_nota: semNota };\n}\n\nfunction mensagemTelegram(ranking, data) {\n  const linhas = [`*Radar de vagas · ${escaparMarkdown(data)}*`, \"\"];\n  if (!ranking.vagas.length) linhas.push(escaparMarkdown(\"Nenhuma vaga nova acima da nota mínima hoje.\"));\n  for (const v of ranking.vagas) {\n    const falta = v.faltando.length ? `\\n   falta: ${escaparMarkdown(v.faltando.slice(0, 3).join(\", \"))}` : \"\";\n    const linha = `*${v.nota}* · [${escaparMarkdown(v.titulo)}](${v.link})\\n   ${escaparMarkdown(v.empresa)} · ${escaparMarkdown(v.modelo)}${falta}`;\n    if (linhas.join(\"\\n\").length + linha.length > LIMITE_TELEGRAM) break;\n    linhas.push(linha);\n  }\n  return linhas.join(\"\\n\");\n}\n\nfunction montarResumo(vagas, notas, estatisticas, cfg, agora = new Date()) {\n  const ranking = ranquear(vagas, notas, cfg);\n  const data = agora.toISOString().slice(0, 10);\n  return {\n    data,\n    gerado_em: agora.toISOString(),\n    termos: cfg.termos,\n    estatisticas: { ...estatisticas, abaixo_da_nota: ranking.abaixo_da_nota, sem_nota: ranking.sem_nota },\n    vagas: ranking.vagas,\n    telegram: mensagemTelegram(ranking, data),\n  };\n}\n\nconst cfg = $('Configuração').first().json;\nconst filtradas = $('Filtrar vagas').all().map((i) => i.json);\nconst vagas = filtradas.filter((v) => !v._vazio);\nconst notas = vagas.length ? $input.all().map((i) => i.json) : [];\nreturn [{ json: montarResumo(vagas, notas, filtradas[0]._estatisticas, cfg) }];"
+        "jsCode": "// Junta as vagas filtradas com a nota do ats-match, ranqueia e monta o resumo do dia.\n// Roda dentro de um nó Code do n8n (o build injeta este arquivo) e nos testes com node --test.\n\nconst LIMITE_TELEGRAM = 4000; // a API do Telegram aceita até 4096 caracteres por mensagem\n\nfunction escaparMarkdown(texto) {\n  return String(texto).replace(/([_*[\\]()~`>#+\\-=|{}.!\\\\])/g, \"\\\\$1\"); // MarkdownV2\n}\n\nfunction ranquear(vagas, notas, cfg) {\n  const juntas = vagas.map((vaga, i) => {\n    const nota = notas[i] || {};\n    return {\n      ...vaga,\n      descricao: undefined,\n      nota: typeof nota.score === \"number\" ? nota.score : null,\n      faltando: nota.missing_required || [],\n      atendidas: nota.matched_required || [],\n    };\n  });\n  const comNota = juntas.filter((v) => v.nota !== null && v.nota >= cfg.nota_minima);\n  const semNota = juntas.filter((v) => v.nota === null).length; // ats-match fora do ar ou vaga sem descrição\n  comNota.sort((a, b) => b.nota - a.nota || String(b.publicada).localeCompare(String(a.publicada)));\n  return { vagas: comNota.slice(0, cfg.maximo), abaixo_da_nota: juntas.length - comNota.length - semNota, sem_nota: semNota };\n}\n\nfunction mensagemTelegram(ranking, data) {\n  const linhas = [`*Radar de vagas · ${escaparMarkdown(data)}*`, \"\"];\n  if (!ranking.vagas.length) linhas.push(escaparMarkdown(\"Nenhuma vaga nova acima da nota mínima hoje.\"));\n  for (const v of ranking.vagas) {\n    const falta = v.faltando.length ? `\\n   falta: ${escaparMarkdown(v.faltando.slice(0, 3).join(\", \"))}` : \"\";\n    const linha = `*${v.nota}* · [${escaparMarkdown(v.titulo)}](${v.link})\\n   ${escaparMarkdown(v.empresa)} · ${escaparMarkdown(v.modelo)}${falta}`;\n    if (linhas.join(\"\\n\").length + linha.length > LIMITE_TELEGRAM) break;\n    linhas.push(linha);\n  }\n  return linhas.join(\"\\n\");\n}\n\n// Mensagem iniciada pela empresa (fora da janela de 24 h) só sai com modelo aprovado pela Meta.\n// Parâmetros de modelo não podem ter quebra de linha, tabulação nem mais de 4 espaços seguidos.\nfunction parametroModelo(texto, limite = 120) {\n  const limpo = String(texto).replace(/\\s+/g, \" \").trim();\n  return limpo.length > limite ? limpo.slice(0, limite - 1) + \"…\" : limpo;\n}\n\nfunction modeloWhatsApp(ranking, data, cfg) {\n  const melhor = ranking.vagas[0];\n  const valores = [data, String(ranking.vagas.length),\n    melhor ? melhor.titulo : \"nenhuma hoje\", melhor ? melhor.empresa : \"-\", melhor ? String(melhor.nota) : \"-\",\n    cfg.whatsapp.link_pagina];\n  return {\n    messaging_product: \"whatsapp\",\n    to: cfg.whatsapp.para,\n    type: \"template\",\n    template: {\n      name: cfg.whatsapp.modelo,\n      language: { code: \"pt_BR\" },\n      components: [{ type: \"body\", parameters: valores.map((v) => ({ type: \"text\", text: parametroModelo(v) })) }],\n    },\n  };\n}\n\nfunction montarResumo(vagas, notas, estatisticas, cfg, agora = new Date()) {\n  const ranking = ranquear(vagas, notas, cfg);\n  const data = agora.toISOString().slice(0, 10);\n  return {\n    data,\n    gerado_em: agora.toISOString(),\n    termos: cfg.termos,\n    estatisticas: { ...estatisticas, abaixo_da_nota: ranking.abaixo_da_nota, sem_nota: ranking.sem_nota },\n    vagas: ranking.vagas,\n    telegram: mensagemTelegram(ranking, data),\n    whatsapp: cfg.whatsapp ? modeloWhatsApp(ranking, data, cfg) : null,\n  };\n}\n\nconst cfg = $('Configuração').first().json;\nconst filtradas = $('Filtrar vagas').all().map((i) => i.json);\nconst vagas = filtradas.filter((v) => !v._vazio);\nconst notas = vagas.length ? $input.all().map((i) => i.json) : [];\nreturn [{ json: montarResumo(vagas, notas, filtradas[0]._estatisticas, cfg) }];"
       }
     },
     {
@@ -212,6 +212,73 @@
         "looseTypeValidation": true,
         "options": {}
       }
+    },
+    {
+      "id": "b10",
+      "name": "Enviar no WhatsApp?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c3",
+              "leftValue": "={{ $('Configuração').first().json.whatsapp.ativo }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "b11",
+      "name": "WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuração').first().json.whatsapp.graph_url }}/{{ $('Configuração').first().json.whatsapp.phone_number_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.whatsapp) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "waToken000000001",
+          "name": "WhatsApp Cloud API (token)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
     },
     {
       "id": "b9",
@@ -336,6 +403,11 @@
             "node": "Enviar no Telegram?",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Enviar no WhatsApp?",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -345,6 +417,18 @@
         [
           {
             "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Enviar no WhatsApp?": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp",
             "type": "main",
             "index": 0
           }

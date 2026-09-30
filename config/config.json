@@ -1,0 +1,12 @@
+{
+  "termos": ["inteligência artificial", "automação", "analista de dados", "prompt", "LLM"],
+  "limite_por_termo": 100,
+  "horas": 48,
+  "modelos": ["remoto", "hibrido", "presencial"],
+  "cidades": ["São Paulo", "Santo André", "São Bernardo do Campo"],
+  "excluir": ["sênior", "sr", "especialista", "coordenador", "gerente", "head", "estágio", "estagiário", "estagiária"],
+  "nota_minima": 40,
+  "maximo": 15,
+  "ats_url": "http://127.0.0.1:8000",
+  "telegram": { "ativo": false, "chat_id": "" }
+}
